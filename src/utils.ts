@@ -1,6 +1,7 @@
 import { Kind, TSchema } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
-import { TypeCheck, TypeCompiler } from '@sinclair/typebox/compiler'
+import { TypeCheck, TypeCompiler } from '@sinclair/typebox/compiler';
+import crypto from 'crypto'
 
 import { isNotEmpty } from './handler'
 
@@ -450,3 +451,45 @@ export const StatusMap = {
 } as const
 
 export type HTTPStatusName = keyof typeof StatusMap
+
+export const signCookie = async (val: string, secret: string | null) => {
+  if (typeof val !== 'string') {
+    throw new TypeError("Cookie value must be provided as a string.");
+  }
+
+  if (secret === null) {
+    throw new TypeError("Secret key must be provided.");
+  }
+
+  const encoder = new TextEncoder();
+
+  const _secret = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const hmacBuffer = await crypto.subtle.sign(
+    'HMAC',
+    _secret,
+    encoder.encode(val)
+  );
+
+  const hmacArray = Array.from(new Uint8Array(hmacBuffer));
+  const digest = btoa(String.fromCharCode(...hmacArray));
+
+  return `${val}.${digest.replace(/=+$/, '')}`;
+}
+
+export const unsignCookie = async (input: string, secret: string | null) => {
+  if ('string' != typeof input) throw new TypeError("Signed cookie string must be provided.");
+  if (null == secret) throw new TypeError("Secret key must be provided.");
+    const encoder = new TextEncoder();
+    const tentativeValue = input.slice(0, input.lastIndexOf('.'));
+    const expectedInput = await signCookie(tentativeValue, secret);
+  return (
+    expectedInput === input
+   ) ? tentativeValue : false;
+}

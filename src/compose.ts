@@ -5,7 +5,7 @@ import type { TAnySchema } from '@sinclair/typebox'
 
 import { parse as parseQuery } from 'fast-querystring'
 
-import { sign as signCookie } from 'cookie-signature'
+import { signCookie } from './utils'
 
 import {
 	mapEarlyResponse,
@@ -632,9 +632,9 @@ export const composeHandler = ({
 			: 'undefined'
 
 		if (hasHeaders)
-			fnLiteral += `\nc.cookie = parseCookie(c.set, c.headers.cookie, ${options})\n`
+			fnLiteral += `\nc.cookie = await parseCookie(c.set, c.headers.cookie, ${options})\n`
 		else
-			fnLiteral += `\nc.cookie = parseCookie(c.set, c.request.headers.get('cookie'), ${options})\n`
+			fnLiteral += `\nc.cookie = await parseCookie(c.set, c.request.headers.get('cookie'), ${options})\n`
 	}
 
 	const hasQuery =
